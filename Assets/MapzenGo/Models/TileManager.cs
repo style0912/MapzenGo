@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Assets.MapzenGo.Models.Plugins;
 using MapzenGo.Helpers;
 using MapzenGo.Models.Factories;
 using MapzenGo.Models.Plugins;
@@ -20,7 +19,7 @@ namespace MapzenGo.Models
 
         protected readonly string _mapzenUrl = "https://vector.mapzen.com/osm/{0}/{1}/{2}/{3}.{4}?api_key={5}";
         [SerializeField] protected string _key = "vector-tiles-5sBcqh6"; //try getting your own key if this doesn't work
-        [SerializeField] protected readonly string _mapzenLayers = "buildings,roads,landuse,water";
+        protected string _mapzenLayers;
         [SerializeField] protected Material MapMaterial;
         protected readonly string _mapzenFormat = "json";
         protected Transform TileHost;
@@ -37,6 +36,7 @@ namespace MapzenGo.Models
                 MapMaterial = Resources.Load<Material>("Ground");
 
             InitFactories();
+            InitLayers();
 
             var v2 = GM.LatLonToMeters(Latitude, Longitude);
             var tile = GM.MetersToTile(v2, Zoom);
@@ -52,6 +52,17 @@ namespace MapzenGo.Models
 
             var rect = GM.TileBounds(CenterTms, Zoom);
             transform.localScale = Vector3.one * (float)(TileSize / rect.Width);
+        }
+
+        private void InitLayers()
+        {
+            var layers = new List<string>();
+            foreach (var plugin in _plugins.OfType<Factory>())
+            {
+                if (layers.Contains(plugin.XmlTag)) continue;
+                layers.Add(plugin.XmlTag);
+            }
+            _mapzenLayers = string.Join(",", layers.ToArray());
         }
 
         private void InitFactories()
@@ -99,7 +110,7 @@ namespace MapzenGo.Models
         protected virtual void LoadTile(Vector2d tileTms, Tile tile)
         {
             var url = string.Format(_mapzenUrl, _mapzenLayers, Zoom, tileTms.x, tileTms.y, _mapzenFormat, _key);
-            //Debug.Log(url);
+            Debug.Log(url);
             ObservableWWW.Get(url)
                 .Subscribe(
                     text => { ConstructTile(text, tile); }, //success
